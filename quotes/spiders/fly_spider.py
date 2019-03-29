@@ -5,13 +5,27 @@ import sys
 import os
 # 代码进行迁移可能报错点
 # ------------------------
-sys.path.append(os.getcwd()+r'\quotes')
-# ------------------------
-from items import QuotesItem
+try:
+    from quotes.items import QuotesItem
+except ModuleNotFoundError:
+    pass
 class FlySpider(scrapy.Spider):
     name = "fly"
     allowed_domains = ["www.zjzxts.gov.cn"]
-    start_urls = ["http://www.zjzxts.gov.cn/sun/satisfaction?page=xjgk&gkbz=1&areacode=330109&index=0&bt="]
+    start_urls = ["http://www.zjzxts.gov.cn/sun/satisfaction?page=xjgk&gkbz=1&areacode=330109&index=0&bt=",
+                  "http://www.zjzxts.gov.cn/sun/satisfaction?page=xjgk&gkbz=1&areacode=330102&index=0&bt=",
+                  "http://www.zjzxts.gov.cn/sun/satisfaction?page=xjgk&gkbz=1&areacode=330103&index=0&bt=",
+                  "http://www.zjzxts.gov.cn/sun/satisfaction?page=xjgk&gkbz=1&areacode=330104&index=0&bt=",
+                  "http://www.zjzxts.gov.cn/sun/satisfaction?page=xjgk&gkbz=1&areacode=330105&index=0&bt=",
+                  "http://www.zjzxts.gov.cn/sun/satisfaction?page=xjgk&gkbz=1&areacode=330108&index=0&bt=",
+                  "http://www.zjzxts.gov.cn/sun/satisfaction?page=xjgk&gkbz=1&areacode=330122&index=0&bt=",
+                  "http://www.zjzxts.gov.cn/sun/satisfaction?page=xjgk&gkbz=1&areacode=330182&index=0&bt=",
+                  "http://www.zjzxts.gov.cn/sun/satisfaction?page=xjgk&gkbz=1&areacode=330111&index=0&bt=",
+                  "http://www.zjzxts.gov.cn/sun/satisfaction?page=xjgk&gkbz=1&areacode=330110&index=0&bt=",
+                  "http://www.zjzxts.gov.cn/sun/satisfaction?page=xjgk&gkbz=1&areacode=330185&index=0&bt=",
+                  "http://www.zjzxts.gov.cn/sun/satisfaction?page=xjgk&gkbz=1&areacode=330198&index=0&bt=",
+                  "http://www.zjzxts.gov.cn/sun/satisfaction?page=xjgk&gkbz=1&areacode=330107&index=0&bt=",
+                  "http://www.zjzxts.gov.cn/sun/satisfaction?page=xjgk&gkbz=1&areacode=330199&index=0&bt="]
 
     def parse(self, response):
         # 解析数据
@@ -23,6 +37,9 @@ class FlySpider(scrapy.Spider):
         for i in temp:
             if '--' in i:
                 message3.remove(i)
+        if '杭州'in message3[1]:
+            message3[1]=message3[1][2:]
+        message3[0] = message3[0]+'市 '
         message3.insert(0, '浙江省 ')
         message3 = ''.join(message3)
         time.sleep(0.1)
@@ -38,7 +55,8 @@ class FlySpider(scrapy.Spider):
             # item['_url'] = 'http://www.zjzxts.gov.cn/wsdt/wsdtHtml/xfjxq.jsp?id='+ value[6:-2]
             url = 'http://www.zjzxts.gov.cn/wsdt/wsdtHtml/xfjxq.jsp?id='+ value[6:-2]
             time.sleep(0.1)
-            yield scrapy.Request(url,meta={'item':item,'Aera':message3,'Url':url},callback=self.detail_parse2)
+            yield scrapy.Request(url,meta={'item':item,'Aera':message3,'Url':url},
+                                 callback=self.detail_parse2)
         current_page = response.css('#content .paginList #cp::text').extract()
         current_page = str(int(current_page[0]))
         if(current_page!='10'):
@@ -49,17 +67,22 @@ class FlySpider(scrapy.Spider):
 
     def detail_parse2(self,response):
         # 接受上级已爬取的数据
+        time.sleep(2)
         item = response.meta['item']
         source = response.css('.blue1::text').extract()
         # 二级页数据提取
         item = QuotesItem()
-        item['url'] = response.meta['Url']
-        item['date'] = source[1]
-        item['aera'] = response.meta['Aera']
-        item['source'] = source[2]
-        item['_content'] = source[0]
-        item['department'] = source[3]
-        item['ans_date'] = source[4]
-        item['ans_content'] = source[5]
+        try:
+            item['url'] = response.meta['Url']
+            item['date'] = source[1]
+            item['aera'] = response.meta['Aera']
+            item['source'] = source[2]
+            item['_content'] = source[0]
+            item['department'] = source[3]
+            item['ans_date'] = source[4]
+            item['ans_content'] = source[5]
+        except IndexError:
+            pass
+
         return item
         # 返回给爬虫引擎
